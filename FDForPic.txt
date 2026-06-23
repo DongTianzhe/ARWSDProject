@@ -1,0 +1,4 @@
+1.6794 R2 0.9966 Edge Density: 0.0496
+1.5144 R2 0.9973 Edge Density: 0.0190
+1.5868 R2 0.9948 Edge Density: 0.0272
+1.2631 R2 0.9944 Edge Density: 0.0071
