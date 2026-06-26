@@ -1,0 +1,18 @@
+# ARWSDProject dependencies.
+# Target interpreter: Python 3.13.
+# Versions below are the latest releases, verified to install and run together on
+# Python 3.13 (pottslab ships a Rust core wheel for cp313 - no pure-Python fallback).
+#
+#   python -m venv .venv && .venv\Scripts\activate     (Windows)
+#   python -m venv .venv && source .venv/bin/activate   (Linux/macOS)
+#   pip install -r requirements.txt
+
+numpy==2.5.0
+opencv-python==4.13.0.92
+matplotlib==3.11.0
+pottslab==1.0.1
+fracDimPy==0.1.4
+
+# NOTE: `carla` is intentionally NOT pinned here. It is tied to a specific CARLA
+# simulator build and Python version, and is only needed for CarlaControl/RGBCamera.ipynb.
+# Install the wheel that matches your running server, e.g.:  pip install carla
