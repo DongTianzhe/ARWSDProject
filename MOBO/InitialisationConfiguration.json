@@ -1,0 +1,72 @@
+{
+    "type": "init",
+    "config": {
+        "numSamplingIterations": 5,
+        "numOptimizationIterations": 10,
+        "batchSize": 1,
+        "numRestarts": 10,
+        "rawSamples": 1024,
+        "mcSamples": 512,
+        "seed": 3,
+        "nParameters": 3,
+        "nObjectives": 3,
+        "warmStart": false,
+        "initialParametersDataPath": "",
+        "initialObjectivesDataPath": "",
+        "warmStartObjectiveFormat": "auto"
+    },
+    "user": {
+        "userId": "1",
+        "conditionId": "-1",
+        "groupId": "-1"
+    },
+    "parameters": [
+        {
+            "key": "buildingOpacity",
+            "init": {
+                "low": 0,
+                "high": 1
+            }
+        },
+        {
+            "key": "vehicleOpacity",
+            "init": {
+                "low": 0,
+                "high": 1
+            }
+        },
+        {
+            "key": "roadOpacity",
+            "init": {
+                "low": 0,
+                "high": 1
+            }
+        }
+    ],
+    "objectives": [
+        {
+            "key": "predictability",
+            "init": {
+                "low": -8,
+                "high": 8,
+                "minimize": 0
+            }
+        },
+        {
+            "key": "trust",
+            "init": {
+                "low": 2,
+                "high": 14,
+                "minimize": 0
+            }
+        },
+        {
+            "key": "mental demand",
+            "init": {
+                "low": 1,
+                "high": 20,
+                "minimize": 1
+            }
+        }
+    ]
+}
