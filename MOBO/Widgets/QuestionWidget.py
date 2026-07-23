@@ -33,7 +33,7 @@ class QuestionWidget(QWidget):
             
             layout.addLayout(optionLayout)
         elif self.type == 'slider':
-            self.currentValue = 0
+            self.currentValue = 1
             self.numberLabel = QLabel('1')
             self.slider = QSlider()
             self.slider.setOrientation(Qt.Orientation.Horizontal)

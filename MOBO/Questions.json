@@ -1,48 +1,27 @@
 [
     {
-        "title": "1. The system state was always clear to me.",
-        "group": "predictability",
+        "title": "1. I found the visualizations visually appealing. (1 -> not appealing, 7 -> appealing)",
+        "group": "aesthetics",
         "type": "checkbox",
-        "options": ["1", "2", "3", "4", "5"],
+        "options": ["1", "2", "3", "4", "5", "6", "7"],
         "smallIsBetter": false
     },
     {
-        "title": "2. I was able to understand why things happened.",
-        "group": "predictability",
-        "type": "checkbox",
-        "options": ["1", "2", "3", "4", "5"],
-        "smallIsBetter": false
-    },
-    {
-        "title": "3. The system reacts unpredictably.",
-        "group": "predictability",
-        "type": "checkbox",
-        "options": ["1", "2", "3", "4", "5"],
-        "smallIsBetter": true
-    },
-    {
-        "title": "4. It's difficult to identify what the system will do next.",
-        "group": "predictability",
-        "type": "checkbox",
-        "options": ["1", "2", "3", "4", "5"],
-        "smallIsBetter": true
-    },
-    {
-        "title": "5. I trust the system.",
+        "title": "2. I trust the system. (1 -> untrust, 7 -> trust)",
         "group": "trust",
         "type": "checkbox",
         "options": ["1", "2", "3", "4", "5", "6", "7"],
         "smallIsBetter": false
     },
     {
-        "title": "6. I can rely on the system.",
+        "title": "3. I can rely on the system. (1 -> can not rely, 7 -> can rely)",
         "group": "trust",
         "type": "checkbox",
         "options": ["1", "2", "3", "4", "5", "6", "7"],
         "smallIsBetter": false
     },
     {
-        "title": "7. How much mental and perceptual activity was required? Was the task easy or demanding, simple or complex, extracting or forgiving?",
+        "title": "4. How much mental and perceptual activity was required? Was the task easy or demanding, simple or complex, extracting or forgiving? (1 -> low, 20 -> high)",
         "group": "mental demand",
         "type": "slider",
         "min": 1,

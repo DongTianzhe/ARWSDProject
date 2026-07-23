@@ -1,4 +1,5 @@
 from PySide6.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QScrollArea, QWidget, QMessageBox, QLabel
+from PySide6.QtCore import Qt
 from Widgets.QuestionWidget import QuestionWidget
 from Widgets.SubmitButton import SubmitButton
 from Widgets.LoadingDialog import LoadingDialog
@@ -7,7 +8,7 @@ import json
 import socket
 
 socketClient = socket.socket()
-socketOpened = True
+socketOpened = False
 recvBuffer = ''
 
 def recvJSON():
@@ -37,11 +38,22 @@ class MainWindow(QMainWindow):
         self.iterationType = 'Sampling'
         self.iteration = 1
 
+        self.questionnaireData = {}
+
         self.loadingDialog = LoadingDialog()
         self.waitingWindow = WaitingWindow()
 
         with open('InitialisationConfiguration.json', encoding='utf-8') as f:
             self.initConfig = json.load(f)
+        
+        with open('Questions.json', encoding='utf-8') as f:
+            self.questions = json.load(f)
+        
+        questionData = []
+        for i in range(len(self.questions)):
+            questionData.append(self.questions[i]['title'])
+        self.questionnaireData['questions'] = questionData
+        print(self.questionnaireData)
         
         self.iterations = {'Sampling': int(self.initConfig['config']['numSamplingIterations']), 'Optimization': int(self.initConfig['config']['numOptimizationIterations'])}
         if self.iterations['Sampling'] == 0:
@@ -68,12 +80,9 @@ class MainWindow(QMainWindow):
         container = QWidget()
         layout = QVBoxLayout(container)
 
-        with open('Questions.json', encoding='utf-8') as f:
-            questions = json.load(f)
-        
         self.questionWidgets = []
 
-        for questionData in questions:
+        for questionData in self.questions:
             question = QuestionWidget(questionData)
 
             layout.addWidget(question)
@@ -109,12 +118,15 @@ class MainWindow(QMainWindow):
         for key in self.submitDict.keys():
             self.submitDict[key] = 0
         
+        currentQuestionnaireData = []
+        
         for widget in self.questionWidgets:
             ans = widget.getAnswer()
             # Prevent unanswered questions
             if ans == None:
                 QMessageBox.information(self, "info", "Please answer all the question.")
                 return
+            currentQuestionnaireData.append(int(ans))
             if widget.type == 'checkbox':
                 if widget.smallIsBetter:
                     self.submitDict[widget.questionGroup] -= int(ans)
@@ -123,6 +135,8 @@ class MainWindow(QMainWindow):
             elif widget.type == 'slider':
                 self.submitDict[widget.questionGroup] = int(ans)
         
+        self.questionnaireData[f'{self.iterationType} {self.iteration}'] = currentQuestionnaireData
+        # print(self.questionnaireData)
         submitDictNew = {'type': 'objectives', 'values': self.submitDict}
         print(submitDictNew)
         self.loadingDialog.show()
@@ -158,10 +172,13 @@ class MainWindow(QMainWindow):
                     msg = recvType('coverage')
                     print('Coverage: ', msg)
             if self.iteration == self.iterations['Optimization']:
+                with open ('questionData.json', 'w', encoding='utf-8') as f:
+                        json.dump(self.questionnaireData, f)
                 if socketOpened:
                     # Receive Optimisation Finished notice
                     msg = recvType('optimization_finished')
-                    print('Optimization Finished')
+                    print('Optimization Finished')  
+                QMessageBox.information(self, "Information", "Optimisation Finished")
             else:
                 self.iteration += 1
                 if socketOpened:

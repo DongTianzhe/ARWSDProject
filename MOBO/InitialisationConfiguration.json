@@ -1,14 +1,14 @@
 {
     "type": "init",
     "config": {
-        "numSamplingIterations": 5,
-        "numOptimizationIterations": 10,
+        "numSamplingIterations": 10,
+        "numOptimizationIterations": 5,
         "batchSize": 1,
         "numRestarts": 10,
         "rawSamples": 1024,
         "mcSamples": 512,
         "seed": 3,
-        "nParameters": 3,
+        "nParameters": 4,
         "nObjectives": 3,
         "warmStart": false,
         "initialParametersDataPath": "",
@@ -22,13 +22,6 @@
     },
     "parameters": [
         {
-            "key": "buildingOpacity",
-            "init": {
-                "low": 0,
-                "high": 1
-            }
-        },
-        {
             "key": "vehicleOpacity",
             "init": {
                 "low": 0,
@@ -41,14 +34,28 @@
                 "low": 0,
                 "high": 1
             }
+        },
+        {
+            "key": "buildingOpacity",
+            "init": {
+                "low": 0,
+                "high": 1
+            }
+        },
+        {
+            "key": "pedstrainOpacity",
+            "init": {
+                "low": 0,
+                "high": 1
+            }
         }
     ],
     "objectives": [
         {
-            "key": "predictability",
+            "key": "aesthetics",
             "init": {
-                "low": -8,
-                "high": 8,
+                "low": 1,
+                "high": 7,
                 "minimize": 0
             }
         },
