@@ -5,10 +5,14 @@ from Widgets.SubmitButton import SubmitButton
 from Widgets.LoadingDialog import LoadingDialog
 from WaitingPage import WaitingWindow
 import json
+import os
 import socket
 
 socketClient = socket.socket()
-socketOpened = False
+# Online (socket) mode is opt-in via env so it can be toggled without editing source.
+# Set ARWSD_ONLINE=1 for a real study run against mobo.py; default stays offline
+# (GUI-only) so the questionnaire is runnable standalone.
+socketOpened = os.environ.get('ARWSD_ONLINE', '0').strip().lower() not in ('', '0', 'false', 'no')
 recvBuffer = ''
 
 def recvJSON():
@@ -20,7 +24,12 @@ def recvJSON():
             recvBuffer = recvBuffer[idx+1:]
             if line.strip():
                 return json.loads(line)
-        recvBuffer += socketClient.recv(4096).decode('utf-8')
+        chunk = socketClient.recv(4096)
+        if not chunk:
+            # Peer closed the socket. Without this guard recv() keeps returning b'',
+            # the buffer never grows, and the while-loop spins at 100% CPU forever.
+            raise ConnectionError('Optimizer closed the connection (check mobo.py output).')
+        recvBuffer += chunk.decode('utf-8', errors='replace')
 
 def recvType(expectedType):
     while True:
@@ -59,17 +68,22 @@ class MainWindow(QMainWindow):
         if self.iterations['Sampling'] == 0:
             self.iterationType = 'optimization'
         
+        global socketOpened
         if socketOpened:
-            socketClient.connect(('localhost', 56001))
-            print('Socket client opened')
-            socketClient.send(json.dumps(self.initConfig).encode('utf-8'))
-            socketClient.send('\n'.encode('utf-8'))
+            try:
+                socketClient.connect(('localhost', 56001))
+                print('Socket client opened')
+                socketClient.sendall(json.dumps(self.initConfig).encode('utf-8') + b'\n')
 
-            if self.iterations['Sampling'] != 0:
-                # Receive sampling parameters
-                print('Receving Initial Sampling Parameters')
-                msg = recvType('parameters')
-                print(msg)
+                if self.iterations['Sampling'] != 0:
+                    # Receive sampling parameters
+                    print('Receiving Initial Sampling Parameters')
+                    msg = recvType('parameters')
+                    print(msg)
+            except (ConnectionError, OSError) as e:
+                socketOpened = False
+                print(f'Could not connect to optimizer on localhost:56001 ({e}); running offline.')
+                QMessageBox.warning(self, 'Offline', f'Could not reach the optimizer on localhost:56001.\n{e}\n\nRunning in offline (GUI-only) mode.')
         
         self.initialisation()
     

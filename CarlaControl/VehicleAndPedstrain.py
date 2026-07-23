@@ -22,16 +22,25 @@ vehicleBP = bpLib.find('vehicle.seat.leon')
 for i in range(numVehicles):
     location = random.choice(spawnPoints)
     while location in vehicleSpawnPointList:
-        print(location)
         location = random.choice(spawnPoints)
-    vehicleSpawnPointList.append(location)
-    vehicle = world.spawn_actor(vehicleBP, location)
-    vehicleList.append(vehicle)
+    # try_spawn_actor returns None on collision instead of raising and aborting setup.
+    vehicle = world.try_spawn_actor(vehicleBP, location)
+    if vehicle is not None:
+        vehicleSpawnPointList.append(location)
+        vehicleList.append(vehicle)
 
-location = random.choice(spawnPoints)
-while location in vehicleSpawnPointList:
+# Retry the ego vehicle until it spawns; it is required by everything downstream.
+mainVehicle = None
+for _ in range(len(spawnPoints)):
     location = random.choice(spawnPoints)
-mainVehicle = world.spawn_actor(vehicleBP, location)
+    if location in vehicleSpawnPointList:
+        continue
+    mainVehicle = world.try_spawn_actor(vehicleBP, location)
+    if mainVehicle is not None:
+        vehicleSpawnPointList.append(location)
+        break
+if mainVehicle is None:
+    raise RuntimeError('Could not spawn the main (ego) vehicle after several attempts.')
 
 spectator = world.get_spectator()
 transform = carla.Transform(mainVehicle.get_transform().transform(carla.Location(x=-4, z=2.5)), carla.Rotation())
@@ -51,19 +60,18 @@ walkerSpawnPointList = []
 walkerBP = bpLib.find('walker.pedestrian.0002')
 walkerControllerBP = bpLib.find('controller.ai.walker')
 for i in range(numWalkers):
-    spawnPoint = carla.Transform()
     location = world.get_random_location_from_navigation()
-    while location in walkerSpawnPointList:
-        location = world.get_random_location_from_navigation()
-        print(location)
-    walkerSpawnPointList.append(location)
-    if location != None:
-        spawnPoint.location = location
-        walker = world.spawn_actor(walkerBP, spawnPoint)
+    if location is None:
+        continue
+    spawnPoint = carla.Transform()
+    spawnPoint.location = location
+    walker = world.try_spawn_actor(walkerBP, spawnPoint)
+    if walker is not None:
+        walkerSpawnPointList.append(location)
         walkerList.append(walker)
 
-for i in range(numWalkers):
-    controller = world.spawn_actor(walkerControllerBP, carla.Transform(), walkerList[i])
+for walker in walkerList:
+    controller = world.spawn_actor(walkerControllerBP, carla.Transform(), walker)
     walkerControllerList.append(controller)
 
 world.wait_for_tick()
@@ -75,15 +83,15 @@ for i in range(len(walkerControllerList)):
 imageW = cameraBP.get_attribute('image_size_x').as_int()
 imageH = cameraBP.get_attribute('image_size_y').as_int()
 
-cameraData = {'image': np.zeros((imageH, imageW, 4))}
+cameraData = {'image': np.zeros((imageH, imageW, 4), dtype=np.uint8)}
 
 camera.listen(lambda image: cameraCallBack(image, cameraData))
 
-for i in range(numVehicles):
-    vehicleList[i].set_autopilot(True)
+for vehicle in vehicleList:
+    vehicle.set_autopilot(True)
 mainVehicle.set_autopilot(True)
 
-for i in range(numWalkers):
+for i in range(len(walkerControllerList)):
     walkerControllerList[i].start()
     walkerControllerList[i].go_to_location(world.get_random_location_from_navigation())
     walkerControllerList[i].set_max_speed(float(walkerBP.get_attribute('speed').recommended_values[1]))
@@ -94,40 +102,41 @@ cv.waitKey(1)
 t = time.time()
 autolist = []
 currentLocation = []
-for i in range(numVehicles):
-    currentLocation.append([round(vehicleList[i].get_location().x, 3), round(vehicleList[i].get_location().y, 3), round(vehicleList[i].get_location().z, 3)])
+for vehicle in vehicleList:
+    currentLocation.append([round(vehicle.get_location().x, 3), round(vehicle.get_location().y, 3), round(vehicle.get_location().z, 3)])
     autolist.append(True)
-mainVehicleLocation = round(mainVehicle.get_location().x, 3), round(mainVehicle.get_location().y, 3), round(mainVehicle.get_location().z, 3)
+mainVehicleLocation = [round(mainVehicle.get_location().x, 3), round(mainVehicle.get_location().y, 3), round(mainVehicle.get_location().z, 3)]
 mainVehicleAuto = True
 print(currentLocation)
 
 while True:
     world.wait_for_tick()
-    for i in range(numVehicles):
+    for i in range(len(vehicleList)):
         if not autolist[i]:
             autolist[i] = True
             vehicleList[i].set_autopilot(True)
-            print(f'Enable automous driving in vehicle {i}')
+            print(f'Enable autonomous driving in vehicle {i}')
     if not mainVehicleAuto:
-        mainVehicleAuto == True
-        print('Enable automous driving in main vehicle')
-    
+        mainVehicleAuto = True
+        mainVehicle.set_autopilot(True)
+        print('Enable autonomous driving in main vehicle')
+
     if time.time() - t > 5:
         t = time.time()
-        for i in range(5):
+        for i in range(len(vehicleList)):
             loc = [round(vehicleList[i].get_location().x, 3), round(vehicleList[i].get_location().y, 3), round(vehicleList[i].get_location().z, 3)]
             # print(loc)
             if loc == currentLocation[i]:
                 vehicleList[i].set_autopilot(False)
                 autolist[i] = False
-                print(f'Disable automous driving in vehicle {i}')
-    
+                print(f'Disable autonomous driving in vehicle {i}')
+
             currentLocation[i] = loc
-        loc = [round(vehicleList[i].get_location().x, 3), round(vehicleList[i].get_location().y, 3), round(vehicleList[i].get_location().z, 3)]
-        if loc == mainVehicleLocation:
+        mainLoc = [round(mainVehicle.get_location().x, 3), round(mainVehicle.get_location().y, 3), round(mainVehicle.get_location().z, 3)]
+        if mainLoc == mainVehicleLocation:
             mainVehicle.set_autopilot(False)
             mainVehicleAuto = False
-            mainVehicleLocation = loc
+        mainVehicleLocation = mainLoc
 
 
     cv.imshow('RGB Camera', cameraData['image'])
@@ -135,13 +144,16 @@ while True:
     # print(vehicle.is_alive, vehicle.get_location())
 
     if cv.waitKey(1) == ord('q'):
-        for i in range(numWalkers):
+        camera.stop()
+        camera.destroy()
+        for i in range(len(walkerControllerList)):
             walkerControllerList[i].stop()
             walkerControllerList[i].destroy()
-            walkerList[i].destroy()
-        for i in range(numVehicles):
-            vehicleList[i].set_autopilot(False)
-            vehicleList[i].destroy()
+        for walker in walkerList:
+            walker.destroy()
+        for vehicle in vehicleList:
+            vehicle.set_autopilot(False)
+            vehicle.destroy()
         mainVehicle.destroy()
         break
 

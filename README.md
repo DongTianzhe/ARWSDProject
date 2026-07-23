@@ -33,6 +33,21 @@ pip install -r requirements.txt
 `carla` is **not** in `requirements.txt` (it is tied to a specific simulator build); install
 it separately only to run `CarlaControl/`.
 
+### MOBO optimizer + CARLA control (separate Python 3.11 env)
+
+The `MOBO/` optimizer/questionnaire and `CarlaControl/` need their **own Python 3.11**
+environment — the vendored CARLA wheel is `cp311`, and CARLA does not run on 3.13:
+
+```bash
+python3.11 -m venv .venv-mobo
+# Windows:  .venv-mobo\Scripts\activate
+pip install -r requirements-mobo.txt
+pip install ./carla-0.9.16-cp311-cp311-win_amd64.whl   # NOT `pip install carla`
+```
+
+(`requirements-mobo.txt` covers torch/botorch/gpytorch/moocore/pandas/PySide6, which
+`requirements.txt` deliberately omits.)
+
 ## Run
 
 ```bash
@@ -73,7 +88,8 @@ print(metrics.all_metrics(img))
 |------|---------|
 | `metrics.py` | **canonical implementation** of all metrics |
 | `run_all.py` | batch driver → `metrics_results.csv` |
-| `requirements.txt` | pinned dependencies (Python 3.11) |
+| `requirements.txt` | pinned metrics-stack dependencies (Python 3.13) |
+| `requirements-mobo.txt` | MOBO optimizer + questionnaire dependencies (Python 3.11) |
 | `pic/` | sample images (`1–3` are 720×1280, `4` is 941×1672); `pic/1.xml` is an ICY ROI export |
 | `CarlaControl/RGBCamera.ipynb` | CARLA RGB-camera capture |
 | `release_smoke_test.ipynb` | checks the `pottslab` Rust core is installed |

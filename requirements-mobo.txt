@@ -1,0 +1,22 @@
+# Dependencies for the MOBO optimizer + questionnaire GUI (MOBO/mobo.py, MOBO/main.py).
+#
+# These are NOT in requirements.txt, which pins only the visual-complexity metrics stack.
+# This subsystem lives in a SEPARATE environment from the metrics stack:
+#   - metrics.py targets Python 3.13 (pottslab ships only a cp313 Rust wheel).
+#   - The vendored CARLA wheel (carla-0.9.16-cp311) is Python 3.11 only, and CARLA does
+#     not run on 3.13, so CARLA + MOBO share a Python 3.11 venv.
+#   Install into a Python 3.11 venv:
+#       python -m venv .venv-mobo && .venv-mobo\Scripts\activate   (Windows)
+#       pip install -r requirements-mobo.txt
+#
+# torch, gpytorch and botorch are tightly version-coupled. botorch is pinned (it anchors
+# the trio: installing it pulls a mutually-compatible gpytorch+torch). Pin the rest here
+# too once your working combination is confirmed (`pip freeze`) for full reproducibility.
+
+botorch==0.18.1
+gpytorch
+torch
+moocore
+pandas
+numpy
+PySide6

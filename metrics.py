@@ -77,16 +77,20 @@ def canny_edges(img_bgr: np.ndarray) -> np.ndarray:
     return cv.Canny(gray, CANNY_LOW, CANNY_HIGH)
 
 
+def _vcot_from_edges(edges: np.ndarray) -> tuple[float, float]:
+    """Box-counting fractal dimension of a precomputed Canny edge map. Returns (dim, R^2)."""
+    from fracDimPy import box_counting  # heavy optional dep; imported lazily
+
+    dim, result = box_counting(edges, data_type="image")
+    return float(dim), float(result["R2"])
+
+
 def vcot(img_bgr: np.ndarray) -> tuple[float, float]:
     """Visual complexity of texture: box-counting fractal dimension of Canny edges.
 
     Returns (fractal_dimension, r_squared).
     """
-    from fracDimPy import box_counting  # heavy optional dep; imported lazily
-
-    edges = canny_edges(img_bgr)
-    dim, result = box_counting(edges, data_type="image")
-    return float(dim), float(result["R2"])
+    return _vcot_from_edges(canny_edges(img_bgr))
 
 
 def edge_density(img_bgr: np.ndarray) -> float:
@@ -114,11 +118,15 @@ def two_d_entropy(gray: np.ndarray) -> float:
     return float(-np.sum(p * np.log(p)))
 
 
+def vcos_from_seg(seg_bgr: np.ndarray) -> float:
+    """VCoS from an already-Potts-segmented BGR image (lets callers reuse one segmentation)."""
+    gray = cv.cvtColor(seg_bgr, cv.COLOR_BGR2GRAY)
+    return two_d_entropy(gray)
+
+
 def vcos(img_bgr: np.ndarray, gamma: float = POTTS_GAMMA) -> float:
     """Visual complexity of shape: 2-D entropy of the Potts-segmented grayscale image."""
-    seg = potts_segment(img_bgr, gamma)
-    gray = cv.cvtColor(seg, cv.COLOR_BGR2GRAY)
-    return two_d_entropy(gray)
+    return vcos_from_seg(potts_segment(img_bgr, gamma))
 
 
 # --------------------------------------------------------------------------- #
@@ -159,10 +167,9 @@ def calculate_ccm(block_lab: np.ndarray, gamma: float = CCM_GAMMA) -> float:
     return float(np.sum(G))
 
 
-def vcoc(img_bgr: np.ndarray, gamma: float = POTTS_GAMMA) -> float:
-    """Visual complexity of color: mean CCM over the four 1/4-image masks."""
-    seg = potts_segment(img_bgr, gamma)
-    lab = _to_lab(seg)
+def vcoc_from_seg(seg_bgr: np.ndarray) -> float:
+    """VCoC from an already-Potts-segmented BGR image (lets callers reuse one segmentation)."""
+    lab = _to_lab(seg_bgr)
     h, w = lab.shape[:2]
     masks = [
         lab[:h // 2, :w // 2], lab[:h // 2, w // 2:],
@@ -171,14 +178,27 @@ def vcoc(img_bgr: np.ndarray, gamma: float = POTTS_GAMMA) -> float:
     return float(np.mean([calculate_ccm(m) for m in masks]))
 
 
+def vcoc(img_bgr: np.ndarray, gamma: float = POTTS_GAMMA) -> float:
+    """Visual complexity of color: mean CCM over the four 1/4-image masks."""
+    return vcoc_from_seg(potts_segment(img_bgr, gamma))
+
+
 # --------------------------------------------------------------------------- #
 def all_metrics(img_bgr: np.ndarray) -> dict:
-    """Compute every metric for one BGR image (already resized by load_image)."""
-    dim, r2 = vcot(img_bgr)
+    """Compute every metric for one BGR image (already resized by load_image).
+
+    The Potts segmentation and the Canny edge map are each computed once and shared:
+    VCoS and VCoC both derive from the single segmentation, and VCoT and edge_density
+    both derive from the single edge map. Output is identical to calling each metric
+    separately, but the expensive Potts solve runs once instead of twice.
+    """
+    edges = canny_edges(img_bgr)
+    dim, r2 = _vcot_from_edges(edges)
+    seg = potts_segment(img_bgr)
     return {
         "vcot_fractal_dim": dim,
         "vcot_r2": r2,
-        "edge_density": edge_density(img_bgr),
-        "vcos_entropy": vcos(img_bgr),
-        "vcoc": vcoc(img_bgr),
+        "edge_density": float(np.count_nonzero(edges) / edges.size),
+        "vcos_entropy": vcos_from_seg(seg),
+        "vcoc": vcoc_from_seg(seg),
     }
